@@ -1,0 +1,19 @@
+@import 'virtual:uno.css';
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Monospace font settings */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Roboto Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+/* Wind4 already includes reset styles, so most custom resets can be removed */
+#root {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Insert line fade-in animation */
+@keyframes insertLineFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
