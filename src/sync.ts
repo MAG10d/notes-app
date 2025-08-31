@@ -6,7 +6,3 @@ export function subscribeRealtime(): () => void {
   // No-op: implement Supabase Realtime subscription later
   return () => {}
 }
-
-
-
-

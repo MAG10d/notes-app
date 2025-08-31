@@ -16,5 +16,3 @@ export class NotesDatabase extends Dexie {
 }
 
 export const db = new NotesDatabase()
-
-
