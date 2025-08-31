@@ -741,6 +741,10 @@ function App() {
     if (!target.closest('.dropdown-container')) {
       setDropdownOpen(false)
     }
+    // Close left filter dropdown when clicking outside of it and not on its trigger
+    if (!target.closest('.left-filter-dropdown') && !target.closest('[title="Filter"]')) {
+      setLeftListDropdownOpen(false)
+    }
     if (!target.closest('.left-sort-dropdown') && !target.closest('[title="Sort"]')) {
       setLeftListSortOpen(false)
     }
@@ -1193,7 +1197,7 @@ function App() {
               <div class="i-f7:line-horizontal-3-decrease w-3.5 h-3.5" />
             </button>
             {leftListDropdownOpen() && (
-              <div class="absolute left-2 top-full mt-1 w-48 bg-white border border-gray-200 rounded-md shadow z-20">
+              <div class="left-filter-dropdown absolute left-2 top-full mt-1 bg-white border border-gray-200 rounded-md shadow z-20" style="width: calc(12rem - 12px)">
                 <button class={`w-full px-3 py-2 text-xs flex items-center ${leftListFilter()==='all' ? 'bg-gray-100 text-gray-800':'text-gray-700 hover:bg-gray-50'} cursor-pointer`} onClick={() => { setLeftListFilter('all'); setLeftListDropdownOpen(false) }}>
                   <span>All notes</span>
                   <span class="ml-auto text-gray-500">({notes().length})</span>
