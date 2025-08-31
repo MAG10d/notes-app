@@ -1303,7 +1303,7 @@ function App() {
                 </button>
               )}
               {selectedGroupId() === null ? (
-                <h2 class="text-lg font-semibold text-gray-800 flex-1">Ungrouped</h2>
+                <h2 class="text-lg font-semibold text-gray-800 max-w-[240px] truncate">Ungrouped</h2>
               ) : (
                 (() => {
                   const group = groups().find(g => g.id === selectedGroupId())
@@ -1342,11 +1342,11 @@ function App() {
                           ;(e.target as HTMLInputElement).blur()
                         }
                       }}
-                      class="text-lg font-semibold bg-transparent border-none outline-none flex-1"
+                      class="text-lg font-semibold bg-transparent border-none outline-none w-full max-w-[240px]"
                       placeholder="Folder name..."
                     />
                   ) : (
-                    <h2 class="text-lg font-semibold text-gray-800 flex-1">Content</h2>
+                    <h2 class="text-lg font-semibold text-gray-800 max-w-[240px] truncate">Content</h2>
                   )
                 })()
               )}
