@@ -10,10 +10,30 @@
 #root {
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  overflow-x: hidden; /* prevent page-level horizontal scroll */
 }
 
 /* Insert line fade-in animation */
 @keyframes insertLineFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Ensure editor tables and long content don't cause page-level horizontal scroll */
+.editor-content {
+  /* create a formatting context to contain overflow */
+  overflow-x: auto;
+}
+.editor-content table {
+  width: max-content !important; /* override any w-full/max-w-full classes */
+  max-width: none !important;
+}
+.editor-content img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+.editor-content pre,
+.editor-content code {
+  white-space: pre;
 }
