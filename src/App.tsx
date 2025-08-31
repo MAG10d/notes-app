@@ -1,4 +1,5 @@
 import { createSignal, createMemo, onMount, For, createEffect } from 'solid-js'
+import { Portal } from 'solid-js/web'
 import type { Note, NoteType, Group, DbNote, OutboxItem } from './types'
 import { db } from './db'
 import { runSyncOnce, subscribeRealtime } from './sync'
@@ -53,6 +54,24 @@ function App() {
     return filtered.sort((a, b) => b.updatedAt - a.updatedAt)
   })
   let searchInputEl: HTMLInputElement | null = null
+  let leftSortBtnEl: HTMLButtonElement | null = null
+  let leftSortHeaderEl: HTMLDivElement | null = null
+  const [leftSortDropdownPos, setLeftSortDropdownPos] = createSignal<{ left: number, top: number }>({ left: 0, top: 0 })
+
+  const updateLeftSortDropdownPosition = () => {
+    if (!leftSortBtnEl) return
+    const buttonRect = leftSortBtnEl.getBoundingClientRect()
+    const menuWidth = 224 // w-56
+    const viewportPadding = 8
+    const verticalGap = 4
+    // Default align to the button's right edge; if sidebar too narrow, align to the container's left border + padding
+    const containerRect = (leftSortHeaderEl || leftSortBtnEl).getBoundingClientRect()
+    let left = sidebarWidth() < 260 ? (containerRect.left + viewportPadding) : (buttonRect.right - menuWidth)
+    // Clamp to viewport
+    left = Math.max(viewportPadding, Math.min(left, window.innerWidth - menuWidth - viewportPadding))
+    const top = buttonRect.bottom + verticalGap
+    setLeftSortDropdownPos({ left, top })
+  }
   let selectionRestored = false
   // Persist and restore last selected note and folder
   const saveSelectedNoteId = (id: string | null) => {
@@ -707,11 +726,23 @@ function App() {
     }
   })
 
+  // Recompute sort dropdown position when sidebar width changes
+  createEffect(() => {
+    const w = sidebarWidth()
+    if (leftListSortOpen()) {
+      requestAnimationFrame(updateLeftSortDropdownPosition)
+    }
+    return w
+  })
+
   // Close menus when clicking outside
   const handleClickOutside = (e: MouseEvent) => {
     const target = e.target as HTMLElement
     if (!target.closest('.dropdown-container')) {
       setDropdownOpen(false)
+    }
+    if (!target.closest('.left-sort-dropdown') && !target.closest('[title="Sort"]')) {
+      setLeftListSortOpen(false)
     }
     if (!target.closest('.context-menu')) {
       setContextMenu(prev => ({ ...prev, visible: false }))
@@ -761,9 +792,12 @@ function App() {
     void runSyncOnce()
     const unsubscribe = subscribeRealtime()
 
-    // Add click-outside event listener
+    // Add click-outside and reposition listeners
     document.addEventListener('click', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
+    const reposition = () => { if (leftListSortOpen()) updateLeftSortDropdownPosition() }
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
 
     // Apply global spellcheck preference immediately and observe DOM changes
     applySpellcheckToTree(spellcheckDisabled())
@@ -779,6 +813,8 @@ function App() {
     return () => {
       document.removeEventListener('click', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
       if (spellcheckObserver) { spellcheckObserver.disconnect(); spellcheckObserver = null }
       if (typeof unsubscribe === 'function') unsubscribe()
     }
@@ -1147,13 +1183,13 @@ function App() {
         </div>
 
         {/* Notes list - always shown */}
-        <div class="flex-1 overflow-y-auto px-2 pt-1 pb-2 border-t border-gray-100">
-          <div class="px-2 py-2 text-xs font-medium text-gray-600 flex items-center gap-2 relative">
+        <div class="flex-1 overflow-y-auto overflow-x-hidden px-2 pt-1 pb-2 border-t border-gray-100">
+          <div ref={(el) => { leftSortHeaderEl = el as HTMLDivElement }} class="px-2 py-2 text-xs font-medium text-gray-600 flex items-center gap-2 relative">
             <span>{leftListFilter() === 'all' ? 'All Notes' : 'Ungrouped only'}</span>
             <button class="p-1 rounded hover:bg-gray-100 cursor-pointer text-gray-600" title="Filter" onClick={() => setLeftListDropdownOpen(!leftListDropdownOpen())}>
               <div class="i-f7:chevron-down w-3 h-3" />
             </button>
-            <button class="p-1 rounded hover:bg-gray-100 cursor-pointer text-gray-600 ml-auto" title="Sort" onClick={() => setLeftListSortOpen(!leftListSortOpen())}>
+            <button ref={(el) => { leftSortBtnEl = el as HTMLButtonElement }} class="p-1 rounded hover:bg-gray-100 cursor-pointer text-gray-600 ml-auto" title="Sort" onClick={() => { setLeftListSortOpen(!leftListSortOpen()); requestAnimationFrame(updateLeftSortDropdownPosition) }}>
               <div class="i-f7:line-horizontal-3-decrease w-3.5 h-3.5" />
             </button>
             {leftListDropdownOpen() && (
@@ -1169,28 +1205,30 @@ function App() {
               </div>
             )}
             {leftListSortOpen() && (
-              <div class="absolute right-2 top-full mt-1 w-56 bg-white border border-gray-200 rounded-md shadow z-20 p-2 text-xs text-gray-700 space-y-2">
-                <div class="font-medium text-gray-600 mb-1">Sort</div>
-                <div class="flex items-center justify-between">
-                  <span>Sort by</span>
-                  <select class="px-2 py-1 rounded bg-gray-100" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
-                    <option value="updated">Updated time</option>
-                    <option value="created">Created time</option>
-                    <option value="title">Title</option>
-                  </select>
+              <Portal>
+                <div class="left-sort-dropdown fixed z-50 w-56 bg-white border border-gray-200 rounded-md shadow p-2 text-xs text-gray-700 space-y-2" style={`left: ${leftSortDropdownPos().left}px; top: ${leftSortDropdownPos().top}px;`}>
+                  <div class="font-medium text-gray-600 mb-1">Sort</div>
+                  <div class="flex items-center justify-between">
+                    <span>Sort by</span>
+                    <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
+                      <option value="updated">Updated time</option>
+                      <option value="created">Created time</option>
+                      <option value="title">Title</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Order</span>
+                    <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Pinned first</span>
+                    <button class={`${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'} px-2 py-1 rounded cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? 'On' : 'Off'}</button>
+                  </div>
                 </div>
-                <div class="flex items-center justify-between">
-                  <span>Order</span>
-                  <select class="px-2 py-1 rounded bg-gray-100" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
-                    <option value="asc">Ascending</option>
-                    <option value="desc">Descending</option>
-                  </select>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span>Pinned first</span>
-                  <button class={`px-2 py-1 rounded ${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'} cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? 'On' : 'Off'}</button>
-                </div>
-              </div>
+              </Portal>
             )}
           </div>
             <For each={sortNotesByPinAndUpdated(leftListFilter()==='all' ? notes() : notes().filter(n => !n.groupId))}>
