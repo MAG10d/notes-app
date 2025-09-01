@@ -1,5 +1,6 @@
 import { Show } from 'solid-js';
 import { useNotes } from '../../context/NotesContext';
+import { Auth } from '../auth/Auth';
 
 export function MainModal() {
   // Get all the states and functions needed for this component from the context
@@ -99,18 +100,7 @@ export function MainModal() {
 
             {/* Conditional rendering of content */}
             <Show when={activeModalTab() === 'account'}>
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                  <div class="i-f7:person w-6 h-6" />
-                </div>
-                <div>
-                  <div class="text-sm text-gray-700">Guest</div>
-                  <div class="text-xs text-gray-500">Not signed in</div>
-                </div>
-                <div class="ml-auto">
-                  <button class="px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 cursor-pointer">Sign in</button>
-                </div>
-              </div>
+                            <Auth /> {/* Render the Auth component here */}
             </Show>
             
             <Show when={activeModalTab() === 'settings'}>

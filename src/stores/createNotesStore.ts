@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onMount, createEffect, batch } from 'solid-js';
+import { createSignal, createMemo, onMount, createEffect, batch, onCleanup } from 'solid-js'; // Added onCleanup
 import type { Note, NoteType, Group } from '../types';
 import {
   loadFromStorage, saveToStorage,
@@ -10,6 +10,8 @@ import {
   loadSpellcheckDisabled,
 } from '../services/storage.ts';
 import { htmlToPlainText } from '../lib/editor.ts';
+import { supabase } from '../lib/supabase'; // Import supabase
+import type { Session, User } from '@supabase/supabase-js'; // Import Supabase types
 
 export function createNotesStore() {
   // --- STATE (Signals) ---
@@ -45,7 +47,19 @@ export function createNotesStore() {
   const [spellcheckDisabled, setSpellcheckDisabled] = createSignal<boolean>(loadSpellcheckDisabled());
   let selectionRestored = false;
 
-  // --- DERIVED STATE (Memos) ---
+  // Supabase Auth State
+  const [session, setSession] = createSignal<Session | null>(null);
+  const [user, setUser] = createSignal<User | null>(null);
+  const [authLoading, setAuthLoading] = createSignal(true);
+  const [authError, setAuthError] = createSignal<string | null>(null);
+  const [isMfaRequired, setIsMfaRequired] = createSignal(false); // Indicates if MFA is required for sign-in
+  const [mfaEnrollmentData, setMfaEnrollmentData] = createSignal<{
+    secret: string;
+    qrCode: string; // SVG QR Code
+    factorId: string;
+  } | null>(null); // For 2FA setup flow
+
+
   const selectedNote = createMemo(() => {
     const id = selectedNoteId();
     return id ? notes().find(note => note.id === id) : null;
@@ -279,7 +293,7 @@ export function createNotesStore() {
   const updateLeftSortDropdownPosition = (btnEl: HTMLButtonElement, headerEl: HTMLDivElement) => {
     if (!btnEl) return;
     const buttonRect = btnEl.getBoundingClientRect();
-    const menuWidth = 224; // w-56
+    const menuWidth = 224;
     const viewportPadding = 8;
     const verticalGap = 4;
     const containerRect = (headerEl || btnEl).getBoundingClientRect();
@@ -289,12 +303,232 @@ export function createNotesStore() {
     setLeftSortDropdownPos({ left, top });
   };
 
-  // --- EFFECTS ---
+  // Supabase Auth functions
+  const signUpWithEmail = async (email: string, password: string) => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { data, error } = await supabase!.auth.signUp({ email, password });
+      if (error) throw error;
+      console.log('Sign up data:', data);
+      if (data.user && !data.session) {
+        // User created but needs email confirmation
+        alert('Please check your email to confirm your account!');
+      } else if (data.session) {
+        // User directly signed in (e.g., email confirmation not required on Supabase)
+        alert('Signed up and logged in successfully!');
+      }
+    } catch (err: any) {
+      console.error('Sign up error:', err);
+      setAuthError(err.message || 'Failed to sign up.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    setAuthLoading(true);
+    setAuthError(null);
+    setIsMfaRequired(false); // Reset MFA state on new sign-in attempt
+    try {
+      const { data, error } = await supabase!.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        if (error.message.includes('mfa_required')) {
+          setIsMfaRequired(true);
+          setAuthError('MFA required. Please enter your 2FA code.');
+        } else {
+          throw error;
+        }
+      } else {
+        console.log('Signed in data:', data);
+        // Session listener will pick up the session if successful
+        setIsMfaRequired(false);
+      }
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      setAuthError(err.message || 'Failed to sign in.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const verifyMfaChallenge = async (code: string) => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { data, error: factorsError } = await supabase!.auth.mfa.listFactors();
+      if (factorsError) throw factorsError;
+
+      const totpFactor = data?.totp?.find((f: any) => f.status === 'verified');
+
+      if (!totpFactor) {
+        throw new Error('No active TOTP factor found for MFA verification.');
+      }
+
+      const { data: challengeData, error: challengeError } = await supabase!.auth.mfa.challenge({
+        factorId: totpFactor.id,
+      });
+
+      if (challengeError) throw challengeError;
+
+      const challengeId = challengeData.id;
+
+      const { error: verifyError } = await supabase!.auth.mfa.verify({
+        factorId: totpFactor.id,
+        challengeId,
+        code,
+      });
+
+      if (verifyError) throw verifyError;
+
+      console.log('MFA Verified successfully!');
+      setIsMfaRequired(false); // Reset MFA state
+      setAuthError(null); // Clear any MFA error
+    } catch (err: any) {
+      console.error('MFA verification error:', err);
+      setAuthError(err.message || 'Failed to verify MFA code.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { data, error } = await supabase!.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin, // Redirect back to the app after OAuth
+        },
+      });
+      if (error) throw error;
+      console.log('Google sign-in initiated:', data);
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      setAuthError(err.message || 'Failed to sign in with Google.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { error } = await supabase!.auth.signOut();
+      if (error) throw error;
+      console.log('Signed out successfully.');
+    } catch (err: any) {
+      console.error('Sign out error:', err);
+      setAuthError(err.message || 'Failed to sign out.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const startMfaSetup = async () => {
+      setAuthLoading(true);
+      setAuthError(null);
+      setMfaEnrollmentData(null); // Clear previous data
+      try {
+          const { data, error } = await supabase!.auth.mfa.enroll({
+              factorType: 'totp',
+          });
+          if (error) throw error;
+
+          const { qr_code, secret } = data.totp;
+          setMfaEnrollmentData({ secret, qrCode: qr_code, factorId: data.id });
+          console.log('MFA enrollment started:', data);
+          setAuthError(null); // Clear any previous error
+      } catch (err: any) {
+          console.error('Start MFA setup error:', err);
+          setAuthError(err.message || 'Failed to start MFA setup.');
+      } finally {
+          setAuthLoading(false);
+      }
+  };
+
+  const verifyMfaSetup = async (code: string) => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      if (!mfaEnrollmentData()) {
+        throw new Error('MFA enrollment not initiated.');
+      }
+
+      const { error } = await supabase!.auth.mfa.challengeAndVerify({
+        factorId: mfaEnrollmentData()!.factorId,
+        code,
+      });
+
+      if (error) throw error;
+
+      alert('MFA setup verified successfully!');
+      setMfaEnrollmentData(null); // Clear setup data after successful verification
+      setAuthError(null); // Clear any previous error
+    } catch (err: any) {
+      console.error('Verify MFA setup error:', err);
+      setAuthError(err.message || 'Failed to verify MFA setup.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const disableMfa = async (factorId: string) => {
+      setAuthLoading(true);
+      setAuthError(null);
+      try {
+          const { error } = await supabase!.auth.mfa.unenroll({ factorId });
+          if (error) throw error;
+          alert('MFA disabled successfully!');
+          setAuthError(null); // Clear any previous error
+      } catch (err: any) {
+          console.error('Disable MFA error:', err);
+          setAuthError(err.message || 'Failed to disable MFA.');
+      } finally {
+          setAuthLoading(false);
+      }
+  };
+
+
   onMount(() => {
     setNotes(loadFromStorage());
     setGroups(loadGroupsFromStorage());
     setSidebarWidth(loadSidebarWidth());
     setSidebarVisible(loadSidebarVisible());
+
+    // Supabase Auth Listener
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user || null);
+        setAuthLoading(false);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          console.log('Auth state changed:', event, session);
+          batch(() => {
+            setSession(session);
+            setUser(session?.user || null);
+            setAuthLoading(false);
+            setAuthError(null); // Clear errors on state change
+            setIsMfaRequired(false); // Reset MFA required state on any auth state change
+            if (event === 'SIGNED_OUT') {
+                setMfaEnrollmentData(null); // Clear MFA setup data
+            }
+          });
+        }
+      );
+      onCleanup(() => {
+        subscription.unsubscribe();
+      });
+    } else {
+      setAuthLoading(false);
+      setAuthError('Supabase client not initialized. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    }
 
     const restoredGroup = loadSelectedGroupId();
     setSelectedGroupId(restoredGroup);
@@ -348,6 +582,14 @@ export function createNotesStore() {
     leftSortDropdownPos,
     spellcheckDisabled,
 
+    // Supabase Auth State
+    session,
+    user,
+    authLoading,
+    authError,
+    isMfaRequired,
+    mfaEnrollmentData,
+
     // Setters
     setNotes,
     setGroups,
@@ -376,6 +618,7 @@ export function createNotesStore() {
     setLeftListPinnedFirst,
     setLeftSortDropdownPos,
     setSpellcheckDisabled,
+    // (No direct setters for auth states like setSession, setUser as they are handled internally or by Supabase listener)
 
     // Derived State (Memos)
     selectedNote,
@@ -401,5 +644,15 @@ export function createNotesStore() {
     handleMouseDown,
     handleContextMenu,
     updateLeftSortDropdownPosition,
+
+    // Supabase Auth Actions
+    signUpWithEmail,
+    signInWithEmail,
+    verifyMfaChallenge,
+    signInWithGoogle,
+    signOut,
+    startMfaSetup,
+    verifyMfaSetup,
+    disableMfa,
   };
 }

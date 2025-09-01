@@ -12,7 +12,8 @@ function App() {
     isMainModalOpen, 
     isSearchModalOpen, 
     setIsMainModalOpen, 
-    setActiveModalTab 
+    setActiveModalTab,
+    user,
   } = useNotes();
 
   return (
@@ -32,7 +33,11 @@ function App() {
           <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
             <div class="i-f7:person w-4 h-4" />
           </div>
-          <span class="text-sm">Guest</span>
+          <span class="text-sm">
+            <Show when={user()} fallback="Guest">
+              {user()?.email}
+            </Show>
+          </span>
         </button>
 
         {/* Settings circle */}
