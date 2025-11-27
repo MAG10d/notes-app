@@ -11,9 +11,9 @@ vi.mock('../context/NotesContext', () => ({
 
 describe('Editor Component', () => {
   it('should show "Show sidebar" button when sidebar is hidden and no group is selected (fallback view)', () => {
-    const [sidebarVisible, setSidebarVisible] = createSignal(false);
-    const [selectedGroupId, setSelectedGroupId] = createSignal(undefined);
-    const [selectedNote, setSelectedNote] = createSignal(null);
+    const [sidebarVisible] = createSignal(false);
+    const [selectedGroupId] = createSignal(undefined);
+    const [selectedNote] = createSignal(null);
     const [editorContextMenu, setEditorContextMenu] = createSignal({ visible: false, x: 0, y: 0 });
 
     (NotesContext.useNotes as any).mockReturnValue({
@@ -37,9 +37,9 @@ describe('Editor Component', () => {
   });
 
   it('should show "Show sidebar" button when sidebar is hidden and no group is selected (active note view)', () => {
-    const [sidebarVisible, setSidebarVisible] = createSignal(false);
-    const [selectedGroupId, setSelectedGroupId] = createSignal(undefined);
-    const [selectedNote, setSelectedNote] = createSignal({ id: '1', title: 'Test', content: '' });
+    const [sidebarVisible] = createSignal(false);
+    const [selectedGroupId] = createSignal(undefined);
+    const [selectedNote] = createSignal({ id: '1', title: 'Test', content: '' });
     const [editorContextMenu, setEditorContextMenu] = createSignal({ visible: false, x: 0, y: 0 });
 
     (NotesContext.useNotes as any).mockReturnValue({
