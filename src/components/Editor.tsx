@@ -7,6 +7,9 @@ export function Editor() {
     updateNote,
     editorContextMenu,
     setEditorContextMenu,
+    sidebarVisible,
+    toggleSidebar,
+    selectedGroupId,
   } = useNotes();
 
   let editorEl: HTMLDivElement | null = null;
@@ -140,7 +143,15 @@ export function Editor() {
   return (
     <div class="flex-1 flex flex-col min-w-0">
       <Show when={!!selectedNote()} fallback={
-        <div class="flex-1 flex items-center justify-center bg-white">
+        <div class="flex-1 flex flex-col items-center justify-center bg-white relative">
+          {/* Show sidebar button when hidden and ContentPanel is hidden (selectedGroupId is undefined) */}
+          <Show when={!sidebarVisible() && selectedGroupId() === undefined}>
+            <div class="absolute top-4 left-4">
+               <button onClick={toggleSidebar} class="p-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer shadow-sm border border-gray-200" title="Show sidebar">
+                <div class="i-f7:sidebar-left w-5 h-5" />
+              </button>
+            </div>
+          </Show>
           <div class="text-center text-gray-500">
             <div class="i-f7:doc-text w-16 h-16 mb-4 mx-auto text-gray-400" />
             <h2 class="text-xl font-medium mb-2">Select a note to start editing</h2>
@@ -151,6 +162,11 @@ export function Editor() {
         {/* Header */}
         <div class="p-4 border-b border-gray-200 bg-white">
           <div class="flex items-center space-x-2">
+            <Show when={!sidebarVisible() && selectedGroupId() === undefined}>
+              <button onClick={toggleSidebar} class="p-1 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer flex-shrink-0" title="Show sidebar">
+                <div class="i-f7:sidebar-left w-4 h-4" />
+              </button>
+            </Show>
             <input
               type="text"
               value={selectedNote()!.title}
