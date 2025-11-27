@@ -24,6 +24,7 @@ describe('Editor Component', () => {
       updateNote: vi.fn(),
       setEditorContextMenu,
       toggleSidebar: vi.fn(),
+      t: (key: string) => key,
     });
 
     const div = document.createElement('div');
@@ -32,7 +33,7 @@ describe('Editor Component', () => {
     });
 
     // Check for the button
-    const btn = div.querySelector('button[title="Show sidebar"]');
+    const btn = div.querySelector('button[title="app.sidebar_show"]');
     expect(btn).not.toBeNull();
   });
 
@@ -50,6 +51,7 @@ describe('Editor Component', () => {
       updateNote: vi.fn(),
       setEditorContextMenu,
       toggleSidebar: vi.fn(),
+      t: (key: string) => key,
     });
 
     const div = document.createElement('div');
@@ -58,7 +60,7 @@ describe('Editor Component', () => {
     });
 
     // Check for the button
-    const btn = div.querySelector('button[title="Show sidebar"]');
+    const btn = div.querySelector('button[title="app.sidebar_show"]');
     expect(btn).not.toBeNull();
   });
 });
