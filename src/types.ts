@@ -52,3 +52,6 @@ export interface OutboxItem {
   payload?: Partial<DbNote>;
   createdAt: number;
 }
+
+export const VIEW_ALL = 'VIEW_ALL';
+export const VIEW_FAVORITES = 'VIEW_FAVORITES';
