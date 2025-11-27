@@ -3,7 +3,7 @@ import { useNotes } from '../context/NotesContext';
 import { NoteItem } from './NoteItem';
 
 export function CalendarView() {
-  const { notes, createNewNote, sidebarVisible, toggleSidebar } = useNotes();
+  const { notes, createNewNote, sidebarVisible, toggleSidebar, t, language } = useNotes();
   const [currentDate, setCurrentDate] = createSignal(new Date());
   const [selectedDate, setSelectedDate] = createSignal<Date>(new Date());
 
@@ -21,10 +21,8 @@ export function CalendarView() {
   const daysInMonth = createMemo(() => getDaysInMonth(currentYear(), currentMonth()));
   const firstDay = createMemo(() => getFirstDayOfMonth(currentYear(), currentMonth()));
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  const monthNames = () => t('calendar.months') as unknown as string[];
+  const weekDays = () => t('calendar.weekdays') as unknown as string[];
 
   const prevMonth = () => {
     setCurrentDate(new Date(currentYear(), currentMonth() - 1, 1));
@@ -74,32 +72,32 @@ export function CalendarView() {
   };
 
   return (
-    <div class="flex flex-col h-full bg-white">
+    <div class="flex flex-col h-full bg-white dark:bg-black">
       {/* Calendar Header */}
-      <div class="flex items-center justify-between p-4 border-b border-gray-200">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
         <div class="flex items-center space-x-2">
             <Show when={!sidebarVisible()}>
-              <button onClick={toggleSidebar} class="p-1 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer flex-shrink-0" title="Show sidebar">
+              <button onClick={toggleSidebar} class="p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer flex-shrink-0" title={t('app.sidebar_show')}>
                 <div class="i-f7:sidebar-left w-4 h-4" />
               </button>
             </Show>
-            <button onClick={prevMonth} class="p-1 hover:bg-gray-100 rounded-full cursor-pointer">
-                <div class="i-f7:chevron-left w-5 h-5 text-gray-600" />
+            <button onClick={prevMonth} class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full cursor-pointer">
+                <div class="i-f7:chevron-left w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
         </div>
-        <span class="text-lg font-semibold text-gray-800">
-          {monthNames[currentMonth()]} {currentYear()}
+        <span class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+          {monthNames()[currentMonth()]} {currentYear()}
         </span>
-        <button onClick={nextMonth} class="p-1 hover:bg-gray-100 rounded-full cursor-pointer">
-          <div class="i-f7:chevron-right w-5 h-5 text-gray-600" />
+        <button onClick={nextMonth} class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full cursor-pointer">
+          <div class="i-f7:chevron-right w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
       </div>
 
       {/* Calendar Grid */}
-      <div class="grid grid-cols-7 gap-1 p-2 border-b border-gray-200">
+      <div class="grid grid-cols-7 gap-1 p-2 border-b border-gray-200 dark:border-gray-800">
         {/* Weekday headers */}
-        <For each={['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']}>
-          {(day) => <div class="text-center text-xs font-medium text-gray-500 py-1">{day}</div>}
+        <For each={weekDays()}>
+          {(day) => <div class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">{day}</div>}
         </For>
 
         {/* Empty cells for previous month */}
@@ -121,8 +119,9 @@ export function CalendarView() {
                 classList={{
                   'aspect-square flex flex-col items-center justify-center rounded-full cursor-pointer text-sm transition-colors relative': true,
                   'bg-blue-500 text-white': isSelected(),
-                  'hover:bg-blue-100': !isSelected(),
-                  'bg-gray-100': !isSelected() && isToday(),
+                  'hover:bg-blue-100 dark:hover:bg-blue-900/40': !isSelected(),
+                  'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100': !isSelected() && isToday(),
+                  'text-gray-700 dark:text-gray-300': !isSelected() && !isToday(),
                   'font-semibold': isToday(),
                 }}
               >
@@ -140,14 +139,14 @@ export function CalendarView() {
       </div>
 
       {/* Selected Date Header & Actions */}
-      <div class="p-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-          <span class="font-medium text-gray-700">
-              {selectedDate().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+      <div class="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <span class="font-medium text-gray-700 dark:text-gray-300">
+              {selectedDate().toLocaleDateString(language() === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </span>
           <button
             onClick={handleCreateNote}
-            class="p-1 text-blue-600 hover:bg-blue-100 rounded cursor-pointer"
-            title="Create note for this day"
+            class="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded cursor-pointer"
+            title={t('calendar.create_note')}
           >
               <div class="i-f7:plus w-5 h-5" />
           </button>
@@ -156,7 +155,7 @@ export function CalendarView() {
       {/* Notes List for Selected Date */}
       <div class="flex-1 overflow-y-auto p-2">
         <Show when={notesForSelectedDate().length > 0} fallback={
-            <div class="text-center text-gray-400 mt-10 text-sm">No notes for this day</div>
+            <div class="text-center text-gray-400 dark:text-gray-600 mt-10 text-sm">{t('calendar.no_notes')}</div>
         }>
              <For each={notesForSelectedDate()}>
                 {(note) => <NoteItem note={note} />}

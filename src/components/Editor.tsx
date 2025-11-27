@@ -10,6 +10,7 @@ export function Editor() {
     sidebarVisible,
     toggleSidebar,
     selectedGroupId,
+    t,
   } = useNotes();
 
   let editorEl: HTMLDivElement | null = null;
@@ -63,13 +64,13 @@ export function Editor() {
     if (!range) return;
 
     const table = document.createElement('table');
-    table.className = 'w-full max-w-full border border-gray-300 border-collapse text-sm my-2';
+    table.className = 'w-full max-w-full border border-gray-300 dark:border-gray-600 border-collapse text-sm my-2';
 
     const thead = document.createElement('thead');
     const headTr = document.createElement('tr');
     for (let c = 0; c < cols; c++) {
       const th = document.createElement('th');
-      th.className = 'border border-gray-300 px-2 py-1 text-left bg-gray-50';
+      th.className = 'border border-gray-300 dark:border-gray-600 px-2 py-1 text-left bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200';
       th.textContent = `Header ${c + 1}`;
       headTr.appendChild(th);
     }
@@ -81,7 +82,7 @@ export function Editor() {
       const tr = document.createElement('tr');
       for (let c = 0; c < cols; c++) {
         const td = document.createElement('td');
-        td.className = 'border border-gray-300 px-2 py-1 align-top';
+        td.className = 'border border-gray-300 dark:border-gray-600 px-2 py-1 align-top text-gray-800 dark:text-gray-200';
         td.innerHTML = '&nbsp;';
         tr.appendChild(td);
       }
@@ -143,32 +144,32 @@ export function Editor() {
   return (
     <div class="flex-1 flex flex-col min-w-0">
       <Show when={!!selectedNote()} fallback={
-        <div class="flex-1 flex flex-col items-center justify-center bg-white relative">
+        <div class="flex-1 flex flex-col items-center justify-center bg-white dark:bg-black relative">
           {/* Show sidebar button when hidden and ContentPanel is hidden (selectedGroupId is undefined) */}
           <Show when={!sidebarVisible() && selectedGroupId() === undefined}>
             <div class="absolute top-4 left-4">
-               <button onClick={toggleSidebar} class="p-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer shadow-sm border border-gray-200" title="Show sidebar">
+               <button onClick={toggleSidebar} class="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer shadow-sm border border-gray-200 dark:border-gray-700" title={t('app.sidebar_show')}>
                 <div class="i-f7:sidebar-left w-5 h-5" />
               </button>
             </div>
           </Show>
-          <div class="text-center text-gray-500">
-            <div class="i-f7:doc-text w-16 h-16 mb-4 mx-auto text-gray-400" />
-            <h2 class="text-xl font-medium mb-2">Select a note to start editing</h2>
+          <div class="text-center text-gray-500 dark:text-gray-400">
+            <div class="i-f7:doc-text w-16 h-16 mb-4 mx-auto text-gray-400 dark:text-gray-600" />
+            <h2 class="text-xl font-medium mb-2">{t('content.default_title')}</h2>
             <button
                 onClick={() => useNotes().createNewNote()}
-                class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer underline decoration-dotted underline-offset-4"
+                class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer underline decoration-dotted underline-offset-4"
             >
-                Or create a new note
+                {t('app.new_note')}
             </button>
           </div>
         </div>
       }>
         {/* Header */}
-        <div class="p-4 border-b border-gray-200 bg-white">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
           <div class="flex items-center space-x-2">
             <Show when={!sidebarVisible() && selectedGroupId() === undefined}>
-              <button onClick={toggleSidebar} class="p-1 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer flex-shrink-0" title="Show sidebar">
+              <button onClick={toggleSidebar} class="p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer flex-shrink-0" title={t('app.sidebar_show')}>
                 <div class="i-f7:sidebar-left w-4 h-4" />
               </button>
             </Show>
@@ -177,14 +178,14 @@ export function Editor() {
               value={selectedNote()!.title}
               onInput={(e) => updateNote(selectedNote()!.id, { title: (e.target as HTMLInputElement).value })}
               spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"
-              class="text-xl font-semibold bg-transparent border-none outline-none flex-1"
-              placeholder="Note title..."
+              class="text-xl font-semibold bg-transparent border-none outline-none flex-1 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600"
+              placeholder={t('editor.title_placeholder')}
             />
           </div>
         </div>
 
         {/* Contenteditable */}
-        <div class="flex-1 p-4 bg-white overflow-x-auto overflow-y-auto editor-content" onContextMenu={(e) => handleContextMenu(e as unknown as MouseEvent)}>
+        <div class="flex-1 p-4 bg-white dark:bg-black overflow-x-auto overflow-y-auto editor-content" onContextMenu={(e) => handleContextMenu(e as unknown as MouseEvent)}>
           <div
             contentEditable
             onInput={(e) => {
@@ -198,7 +199,7 @@ export function Editor() {
               editorEl.innerHTML = n?.content || '';
               lastBoundId = n ? n.id : null;
             }}
-            class="min-w-max h-full border-none outline-none text-gray-700 leading-relaxed font-mono"
+            class="min-w-max h-full border-none outline-none text-gray-700 dark:text-gray-300 leading-relaxed font-mono"
             spellcheck="false" autocapitalize="off" autocorrect="off"
             lang="en-US"
             style="white-space: pre-wrap;"
@@ -208,7 +209,7 @@ export function Editor() {
         {/* Editor context menu */}
         <Show when={editorContextMenu().visible}>
           <div
-            class="context-menu fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 min-w-36"
+            class="context-menu fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-2 min-w-36"
             style={`left: ${editorContextMenu().x}px; top: ${editorContextMenu().y}px;`}
           >
             <button
@@ -216,7 +217,7 @@ export function Editor() {
                 insertHtmlTable(3, 2);
                 setEditorContextMenu(prev => ({ ...prev, visible: false }));
               }}
-              class="w-full text-left px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-xs text-gray-700 flex items-center space-x-2"
+              class="w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer text-xs text-gray-700 dark:text-gray-200 flex items-center space-x-2"
             >
               <div class="i-f7:table w-3 h-3" />
               <span>New Table</span>

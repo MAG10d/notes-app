@@ -43,6 +43,7 @@ export function ContentPanel() {
     setLeftListSortKey,
     setLeftListSortOrder,
     setLeftListPinnedFirst,
+    t,
   } = useNotes();
 
   const [isFolderPanelEditing, setIsFolderPanelEditing] = createSignal(false);
@@ -116,24 +117,24 @@ export function ContentPanel() {
   // Title Logic
   const panelTitle = createMemo(() => {
       const gid = selectedGroupId();
-      if (gid === VIEW_ALL) return 'All Notes';
-      if (gid === VIEW_FAVORITES) return 'Favorites';
-      if (gid === null) return 'Ungrouped';
+      if (gid === VIEW_ALL) return t('views.all_notes');
+      if (gid === VIEW_FAVORITES) return t('views.favorites');
+      if (gid === null) return t('views.ungrouped');
       const g = groups().find(gr => gr.id === gid);
-      return g ? g.name : 'Content';
+      return g ? g.name : t('content.default_title');
   });
 
   return (
     <Show when={selectedGroupId() !== undefined}>
-      <div class="bg-white border-r border-gray-200 flex flex-col" style={`width: ${contentPanelWidth}px; max-width: calc(100vw - ${sidebarWidth()}px);`}>
+      <div class="bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex flex-col" style={`width: ${contentPanelWidth}px; max-width: calc(100vw - ${sidebarWidth()}px);`}>
         <Show when={selectedGroupId() === VIEW_CALENDAR}>
             <CalendarView />
         </Show>
         <Show when={selectedGroupId() !== VIEW_CALENDAR}>
-            <div class="p-4 border-b border-gray-200">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-800">
             <div class="flex items-center space-x-2">
                 <Show when={!sidebarVisible()}>
-                <button onClick={toggleSidebar} class="p-1 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer flex-shrink-0" title="Show sidebar">
+              <button onClick={toggleSidebar} class="p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer flex-shrink-0" title={t('app.sidebar_show')}>
                     <div class="i-f7:sidebar-left w-4 h-4" />
                 </button>
                 </Show>
@@ -144,7 +145,7 @@ export function ContentPanel() {
                         const gid = selectedGroupId();
                         return gid !== VIEW_ALL && gid !== VIEW_FAVORITES && gid !== null && gid !== undefined;
                     }} fallback={
-                        <h2 class="text-lg font-semibold text-gray-800 truncate" title={panelTitle()}>{panelTitle()}</h2>
+                     <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate" title={panelTitle()}>{panelTitle()}</h2>
                     }>
                         {(() => {
                             const g = groups().find(gr => gr.id === selectedGroupId());
@@ -176,10 +177,10 @@ export function ContentPanel() {
                                     (e.target as HTMLInputElement).blur();
                                 }
                                 }}
-                                class="text-lg font-semibold bg-transparent border-none outline-none w-full"
-                                placeholder="Folder name..."
+                            class="text-lg font-semibold bg-transparent border-none outline-none w-full text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600"
+                            placeholder={t('content.folder_placeholder')}
                             />
-                            ) : <span>Content</span>
+                        ) : <span>{t('content.default_title')}</span>
                         })()}
                     </Show>
                 </div>
@@ -193,8 +194,8 @@ export function ContentPanel() {
                         updateSortDropdownPosition();
                         setSortDropdownOpen(!sortDropdownOpen());
                     }}
-                    class="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer flex-shrink-0"
-                    title="Sort"
+                class="p-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer flex-shrink-0"
+                title={t('content.sort_by')}
                 >
                 <div class="i-f7:line-horizontal-3-decrease w-4 h-4" />
                 </button>
@@ -202,29 +203,29 @@ export function ContentPanel() {
                 <Show when={sortDropdownOpen()}>
                 <Portal>
                     <div
-                    class="fixed z-50 w-56 bg-white border border-gray-200 rounded-md shadow p-2 text-xs text-gray-700 space-y-2"
+                  class="fixed z-50 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow p-2 text-xs text-gray-700 dark:text-gray-300 space-y-2"
                     style={`left: ${sortDropdownPos().left}px; top: ${sortDropdownPos().top}px;`}
                     use:clickOutside={() => setSortDropdownOpen(false)}
                     >
-                    <div class="font-medium text-gray-600 mb-1">Sort</div>
+                  <div class="font-medium text-gray-600 dark:text-gray-400 mb-1">{t('content.sort_by')}</div>
                     <div class="flex items-center justify-between">
-                        <span>Sort by</span>
-                        <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
-                        <option value="updated">Updated time</option>
-                        <option value="created">Created time</option>
-                        <option value="title">Title</option>
+                    <span>{t('content.sort_by')}</span>
+                    <select class="px-3 py-2 text-xs rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
+                      <option value="updated">{t('content.updated_time')}</option>
+                      <option value="created">{t('content.created_time')}</option>
+                      <option value="title">{t('content.title')}</option>
                         </select>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span>Order</span>
-                        <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
-                        <option value="asc">Ascending</option>
-                        <option value="desc">Descending</option>
+                    <span>{t('content.order')}</span>
+                    <select class="px-3 py-2 text-xs rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
+                      <option value="asc">{t('content.ascending')}</option>
+                      <option value="desc">{t('content.descending')}</option>
                         </select>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span>Pinned first</span>
-                        <button class={`${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'} px-2 py-1 rounded cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? 'On' : 'Off'}</button>
+                    <span>{t('content.pinned_first')}</span>
+                    <button class={`${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500' : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'} px-2 py-1 rounded cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? t('content.on') : t('content.off')}</button>
                     </div>
                     </div>
                 </Portal>
@@ -238,9 +239,9 @@ export function ContentPanel() {
                 {(note) => <NoteItem note={note} />}
             </For>
             <Show when={filteredNotes().length === 0}>
-                <div class="p-6 text-center text-gray-500">
+            <div class="p-6 text-center text-gray-500 dark:text-gray-400">
                 <div class="text-xs">
-                    {searchQuery() ? 'No matching notes' : 'No notes found'}
+                  {searchQuery() ? t('content.no_matching_notes') : t('content.no_notes')}
                 </div>
                 </div>
             </Show>
