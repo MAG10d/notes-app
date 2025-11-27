@@ -1,5 +1,11 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { useNotes } from '../context/NotesContext';
+import { NoteItem } from './NoteItem';
+import { VIEW_ALL, VIEW_FAVORITES } from '../types';
+import { clickOutside } from '../directives/clickOutside';
+
+false && clickOutside;
 
 function htmlToPlainText(html: string): string {
   if (!html) return '';
@@ -21,23 +27,37 @@ export function ContentPanel() {
     sidebarVisible,
     sidebarWidth,
 
-    // filters and sorting controls to align sorting with sidebar
+    // filters and sorting controls
     filterType,
-    leftListSortKey,
-    leftListSortOrder,
-    leftListPinnedFirst,
     searchQuery,
 
     // actions
     toggleSidebar,
-    selectNote,
-    deleteNote,
-    handleContextMenu,
     updateGroup,
+
+    // sorting
+    leftListSortKey,
+    leftListSortOrder,
+    leftListPinnedFirst,
+    setLeftListSortKey,
+    setLeftListSortOrder,
+    setLeftListPinnedFirst,
   } = useNotes();
 
   const [isFolderPanelEditing, setIsFolderPanelEditing] = createSignal(false);
   const [folderPanelEditingTitle, setFolderPanelEditingTitle] = createSignal('');
+
+  // Sort UI state
+  const [sortDropdownOpen, setSortDropdownOpen] = createSignal(false);
+  const [sortDropdownPos, setSortDropdownPos] = createSignal({ left: 0, top: 0 });
+  let sortBtnEl: HTMLButtonElement | null = null;
+
+  const updateSortDropdownPosition = () => {
+    if (sortBtnEl) {
+      const rect = sortBtnEl.getBoundingClientRect();
+      setSortDropdownPos({ left: rect.right - 224, top: rect.bottom + 4 });
+    }
+  };
 
   const sortNotesByPinAndUpdated = (arr: ReturnType<typeof notes>) => {
     const key = leftListSortKey();
@@ -65,8 +85,19 @@ export function ContentPanel() {
   const filteredNotes = createMemo(() => {
     let filtered = notes();
     const gid = selectedGroupId();
-    if (gid) filtered = filtered.filter(n => n.groupId === gid);
-    else if (gid === null && selectedGroupId() !== undefined) filtered = filtered.filter(n => !n.groupId);
+
+    // Smart Views logic
+    if (gid === VIEW_ALL) {
+       // All notes
+    } else if (gid === VIEW_FAVORITES) {
+       filtered = filtered.filter(n => n.isFavorite);
+    } else if (gid === null) {
+       // Ungrouped
+       filtered = filtered.filter(n => !n.groupId);
+    } else if (gid !== undefined) {
+       // Specific group
+       filtered = filtered.filter(n => n.groupId === gid);
+    }
 
     const f = filterType();
     if (f === 'favorites') filtered = filtered.filter(n => n.isFavorite);
@@ -81,6 +112,16 @@ export function ContentPanel() {
 
   const contentPanelWidth = 280;
 
+  // Title Logic
+  const panelTitle = createMemo(() => {
+      const gid = selectedGroupId();
+      if (gid === VIEW_ALL) return 'All Notes';
+      if (gid === VIEW_FAVORITES) return 'Favorites';
+      if (gid === null) return 'Ungrouped';
+      const g = groups().find(gr => gr.id === gid);
+      return g ? g.name : 'Content';
+  });
+
   return (
     <Show when={selectedGroupId() !== undefined}>
       <div class="bg-white border-r border-gray-200 flex flex-col" style={`width: ${contentPanelWidth}px; max-width: calc(100vw - ${sidebarWidth()}px);`}>
@@ -91,89 +132,111 @@ export function ContentPanel() {
                 <div class="i-f7:sidebar-left w-4 h-4" />
               </button>
             </Show>
-            <Show when={selectedGroupId() === null} fallback={(() => {
-              const g = groups().find(gr => gr.id === selectedGroupId());
-              return g
-                ? (
-                  <input
-                    type="text"
-                    value={isFolderPanelEditing() ? folderPanelEditingTitle() : g.name}
-                    onInput={(e) => setFolderPanelEditingTitle((e.target as HTMLInputElement).value)}
-                    onFocus={() => {
-                      setIsFolderPanelEditing(true);
-                      setFolderPanelEditingTitle(g.name);
-                    }}
-                    onBlur={(e) => {
-                      const newTitle = (e.target as HTMLInputElement).value.trim();
-                      if (newTitle && newTitle !== g.name) {
-                        updateGroup(g.id, newTitle);
-                      } else if (!newTitle) {
-                        setFolderPanelEditingTitle(g.name);
-                      }
-                      setIsFolderPanelEditing(false);
-                      setFolderPanelEditingTitle('');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const newTitle = (e.target as HTMLInputElement).value.trim();
-                        if (newTitle && newTitle !== g.name) {
-                          updateGroup(g.id, newTitle);
-                        }
-                        setIsFolderPanelEditing(false);
-                        setFolderPanelEditingTitle('');
-                        (e.target as HTMLInputElement).blur();
-                      } else if (e.key === 'Escape') {
-                        setIsFolderPanelEditing(false);
-                        setFolderPanelEditingTitle('');
-                        (e.target as HTMLInputElement).blur();
-                      }
-                    }}
-                    class="text-lg font-semibold bg-transparent border-none outline-none w-full max-w-[240px]"
-                    placeholder="Folder name..."
-                  />
-                )
-                : <h2 class="text-lg font-semibold text-gray-800 max-w-[240px] truncate">Content</h2>;
-            })()}>
-              <h2 class="text-lg font-semibold text-gray-800 max-w-[240px] truncate">Ungrouped</h2>
+
+            {/* Title / Folder Editing */}
+            <div class="flex-1 min-w-0">
+                 <Show when={() => {
+                     const gid = selectedGroupId();
+                     return gid !== VIEW_ALL && gid !== VIEW_FAVORITES && gid !== null && gid !== undefined;
+                 }} fallback={
+                     <h2 class="text-lg font-semibold text-gray-800 truncate" title={panelTitle()}>{panelTitle()}</h2>
+                 }>
+                    {(() => {
+                        const g = groups().find(gr => gr.id === selectedGroupId());
+                        return g ? (
+                           <input
+                            type="text"
+                            value={isFolderPanelEditing() ? folderPanelEditingTitle() : g.name}
+                            onInput={(e) => setFolderPanelEditingTitle((e.target as HTMLInputElement).value)}
+                            onFocus={() => {
+                              setIsFolderPanelEditing(true);
+                              setFolderPanelEditingTitle(g.name);
+                            }}
+                            onBlur={(e) => {
+                              const newTitle = (e.target as HTMLInputElement).value.trim();
+                              if (newTitle && newTitle !== g.name) {
+                                updateGroup(g.id, newTitle);
+                              } else if (!newTitle) {
+                                setFolderPanelEditingTitle(g.name);
+                              }
+                              setIsFolderPanelEditing(false);
+                              setFolderPanelEditingTitle('');
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur();
+                              } else if (e.key === 'Escape') {
+                                setIsFolderPanelEditing(false);
+                                setFolderPanelEditingTitle('');
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            class="text-lg font-semibold bg-transparent border-none outline-none w-full"
+                            placeholder="Folder name..."
+                          />
+                        ) : <span>Content</span>
+                    })()}
+                 </Show>
+            </div>
+
+            <span class="text-sm text-gray-500 flex-shrink-0">{filteredNotes().length}</span>
+
+            {/* Sort Button */}
+            <button
+                ref={(el) => { sortBtnEl = el as HTMLButtonElement; }}
+                onClick={() => {
+                    updateSortDropdownPosition();
+                    setSortDropdownOpen(!sortDropdownOpen());
+                }}
+                class="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer flex-shrink-0"
+                title="Sort"
+            >
+              <div class="i-f7:line-horizontal-3-decrease w-4 h-4" />
+            </button>
+
+            <Show when={sortDropdownOpen()}>
+              <Portal>
+                <div
+                  class="fixed z-50 w-56 bg-white border border-gray-200 rounded-md shadow p-2 text-xs text-gray-700 space-y-2"
+                  style={`left: ${sortDropdownPos().left}px; top: ${sortDropdownPos().top}px;`}
+                  use:clickOutside={() => setSortDropdownOpen(false)}
+                >
+                  <div class="font-medium text-gray-600 mb-1">Sort</div>
+                  <div class="flex items-center justify-between">
+                    <span>Sort by</span>
+                    <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
+                      <option value="updated">Updated time</option>
+                      <option value="created">Created time</option>
+                      <option value="title">Title</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Order</span>
+                    <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Pinned first</span>
+                    <button class={`${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'} px-2 py-1 rounded cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? 'On' : 'Off'}</button>
+                  </div>
+                </div>
+              </Portal>
             </Show>
-            <span class="text-sm text-gray-500 flex-shrink-0">{filteredNotes().length} notes</span>
+
           </div>
         </div>
 
         <div class="flex-1 overflow-y-auto px-2 pt-2 pb-2">
           <For each={filteredNotes()}>
-            {(note) => (
-              <div
-                onClick={() => selectNote(note.id)}
-                onContextMenu={(e) => handleContextMenu(e as unknown as MouseEvent, note.id)}
-                classList={{
-                  'group flex items-center space-x-2 p-3 mx-1 mb-1 cursor-pointer hover:bg-gray-100 rounded-md transition-colors text-gray-700': true,
-                }}
-              >
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center space-x-1 mb-1">
-                    <h3 class="font-medium truncate text-sm flex-1">{note.title || 'Untitled'}</h3>
-                    <Show when={note.isFavorite}><div class="i-f7:star-fill w-3 h-3 text-yellow-500" /></Show>
-                    <Show when={note.type === 'material'}><div class="i-f7:book w-3 h-3 text-gray-600" /></Show>
-                    <Show when={note.type === 'template'}><div class="i-f7:rectangle-stack w-3 h-3 text-green-500" /></Show>
-                  </div>
-                  <p class="text-xs text-gray-500 truncate">
-                    {(() => {
-                      const text = htmlToPlainText(note.content || '');
-                      return text ? (text.length > 60 ? text.substring(0, 60) + '...' : text) : 'Empty note';
-                    })()}
-                  </p>
-                  <p class="text-xs text-gray-400 mt-1">{new Date(note.updatedAt).toLocaleDateString('en-US')}</p>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); deleteNote(note.id); }} class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all flex-shrink-0 p-1 hover:bg-gray-200 rounded cursor-pointer">
-                  <div class="i-f7:trash w-3 h-3" />
-                </button>
-              </div>
-            )}
+            {(note) => <NoteItem note={note} />}
           </For>
           <Show when={filteredNotes().length === 0}>
             <div class="p-6 text-center text-gray-500">
-              <div class="text-xs">{selectedGroupId() === null ? 'No notes in Ungrouped' : 'No notes in this folder'}</div>
+              <div class="text-xs">
+                  {searchQuery() ? 'No matching notes' : 'No notes found'}
+              </div>
             </div>
           </Show>
         </div>

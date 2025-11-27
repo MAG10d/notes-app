@@ -155,7 +155,12 @@ export function Editor() {
           <div class="text-center text-gray-500">
             <div class="i-f7:doc-text w-16 h-16 mb-4 mx-auto text-gray-400" />
             <h2 class="text-xl font-medium mb-2">Select a note to start editing</h2>
-            <p class="text-gray-400">Or create a new note</p>
+            <button
+                onClick={() => useNotes().createNewNote()}
+                class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer underline decoration-dotted underline-offset-4"
+            >
+                Or create a new note
+            </button>
           </div>
         </div>
       }>
