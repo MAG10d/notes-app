@@ -11,6 +11,7 @@ import {
 } from '../services/storage.ts';
 import { htmlToPlainText } from '../lib/editor.ts';
 import { supabase } from '../lib/supabase'; // Import supabase
+import { runSyncOnce } from '../sync'; // Import sync function
 import type { Session, User } from '@supabase/supabase-js'; // Import Supabase types
 
 export function createNotesStore() {
@@ -520,6 +521,9 @@ export function createNotesStore() {
                 setMfaEnrollmentData(null); // Clear MFA setup data
             }
           });
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            runSyncOnce();
+          }
         }
       );
       onCleanup(() => {
