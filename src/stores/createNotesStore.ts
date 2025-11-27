@@ -8,7 +8,11 @@ import {
   loadSidebarWidth, saveSidebarWidth,
   loadSidebarVisible, saveSidebarVisible,
   loadSpellcheckDisabled,
+  loadTheme, saveTheme,
+  loadLanguage, saveLanguage,
 } from '../services/storage.ts';
+import type { Theme } from '../services/storage.ts';
+import { getTranslation, type Language } from '../i18n';
 import { htmlToPlainText } from '../lib/editor.ts';
 import { supabase } from '../lib/supabase'; // Import supabase
 import { runSyncOnce } from '../sync'; // Import sync function
@@ -46,6 +50,9 @@ export function createNotesStore() {
   const [leftSortDropdownPos, setLeftSortDropdownPos] = createSignal<{ left: number, top: number }>({ left: 0, top: 0 });
 
   const [spellcheckDisabled, setSpellcheckDisabled] = createSignal<boolean>(loadSpellcheckDisabled());
+  const [theme, setThemeState] = createSignal<Theme>(loadTheme());
+  const [language, setLanguageState] = createSignal<Language>(loadLanguage());
+
   let selectionRestored = false;
 
   // Supabase Auth State
@@ -127,13 +134,14 @@ export function createNotesStore() {
     saveSidebarVisible(newVisible);
   };
 
-  const createNewNote = (type: NoteType = 'normal') => {
+  const createNewNote = (type: NoteType = 'normal', customDate?: number) => {
+    const timestamp = customDate || Date.now();
     const newNote: Note = {
-      id: `${Date.now()}`,
+      id: `${timestamp}`,
       title: 'New Note',
       content: '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
       type,
       isFavorite: false,
       pinned: false,
@@ -548,6 +556,20 @@ export function createNotesStore() {
   });
 
   createEffect(() => {
+    const t = theme();
+    if (t === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    saveTheme(t);
+  });
+
+  createEffect(() => {
+    saveLanguage(language());
+  });
+
+  createEffect(() => {
     if (selectionRestored) saveSelectedNoteId(selectedNoteId());
   });
   createEffect(() => {
@@ -629,6 +651,13 @@ export function createNotesStore() {
     noteStats,
     sortedNotes,
     searchModalResults,
+
+    // Settings
+    theme,
+    language,
+    t: (key: string, params?: Record<string, string | number>) => getTranslation(language(), key, params),
+    setTheme: setThemeState,
+    setLanguage: setLanguageState,
 
     // Actions (Functions)
     toggleSidebar,

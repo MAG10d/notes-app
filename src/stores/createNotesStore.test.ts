@@ -48,6 +48,10 @@ vi.mock('../services/storage.ts', () => ({
   loadSidebarVisible: vi.fn().mockReturnValue(true),
   saveSidebarVisible: vi.fn(),
   loadSpellcheckDisabled: vi.fn().mockReturnValue(false),
+  loadTheme: vi.fn().mockReturnValue('light'),
+  saveTheme: vi.fn(),
+  loadLanguage: vi.fn().mockReturnValue('en'),
+  saveLanguage: vi.fn(),
 }));
 
 describe('createNotesStore - Sync Integration', () => {

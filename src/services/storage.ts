@@ -127,3 +127,37 @@ export const saveSpellcheckDisabled = (value: boolean) => {
     localStorage.setItem('disableSpellcheck', value.toString());
   } catch {}
 };
+
+// Theme
+export type Theme = 'light' | 'dark';
+export const loadTheme = (): Theme => {
+  try {
+    const stored = localStorage.getItem('theme');
+    return (stored === 'light' || stored === 'dark') ? stored : 'light';
+  } catch {
+    return 'light';
+  }
+};
+
+export const saveTheme = (theme: Theme) => {
+  try {
+    localStorage.setItem('theme', theme);
+  } catch {}
+};
+
+// Language
+import type { Language } from '../i18n';
+export const loadLanguage = (): Language => {
+  try {
+    const stored = localStorage.getItem('language');
+    return (stored === 'en' || stored === 'es') ? (stored as Language) : 'en';
+  } catch {
+    return 'en';
+  }
+};
+
+export const saveLanguage = (lang: Language) => {
+  try {
+    localStorage.setItem('language', lang);
+  } catch {}
+};
