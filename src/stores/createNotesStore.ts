@@ -127,13 +127,14 @@ export function createNotesStore() {
     saveSidebarVisible(newVisible);
   };
 
-  const createNewNote = (type: NoteType = 'normal') => {
+  const createNewNote = (type: NoteType = 'normal', customDate?: number) => {
+    const timestamp = customDate || Date.now();
     const newNote: Note = {
-      id: `${Date.now()}`,
+      id: `${timestamp}`,
       title: 'New Note',
       content: '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
       type,
       isFavorite: false,
       pinned: false,

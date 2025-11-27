@@ -1,7 +1,7 @@
 import { Show, For } from 'solid-js';
 import { useNotes } from '../context/NotesContext';
 import { clickOutside } from '../directives/clickOutside';
-import { VIEW_ALL, VIEW_FAVORITES } from '../types';
+import { VIEW_ALL, VIEW_FAVORITES, VIEW_CALENDAR } from '../types';
 
 false && clickOutside;
 
@@ -205,6 +205,7 @@ export function Sidebar() {
         <div class="px-2 pb-2">
             <SmartViewItem id={VIEW_ALL} name="All Notes" icon="i-f7:doc-on-doc" count={noteStats().all} />
             <SmartViewItem id={VIEW_FAVORITES} name="Favorites" icon="i-f7:star-fill" count={noteStats().favorites} color="text-yellow-500" />
+            <SmartViewItem id={VIEW_CALENDAR} name="Calendar" icon="i-f7:calendar" count={notes().length} />
             <SmartViewItem id={null} name="Ungrouped" icon="i-f7:tray" count={notes().filter(n => !n.groupId).length} />
         </div>
 

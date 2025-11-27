@@ -2,7 +2,8 @@ import { For, Show, createMemo, createSignal } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { useNotes } from '../context/NotesContext';
 import { NoteItem } from './NoteItem';
-import { VIEW_ALL, VIEW_FAVORITES } from '../types';
+import { CalendarView } from './CalendarView';
+import { VIEW_ALL, VIEW_FAVORITES, VIEW_CALENDAR } from '../types';
 import { clickOutside } from '../directives/clickOutside';
 
 false && clickOutside;
@@ -125,121 +126,126 @@ export function ContentPanel() {
   return (
     <Show when={selectedGroupId() !== undefined}>
       <div class="bg-white border-r border-gray-200 flex flex-col" style={`width: ${contentPanelWidth}px; max-width: calc(100vw - ${sidebarWidth()}px);`}>
-        <div class="p-4 border-b border-gray-200">
-          <div class="flex items-center space-x-2">
-            <Show when={!sidebarVisible()}>
-              <button onClick={toggleSidebar} class="p-1 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer flex-shrink-0" title="Show sidebar">
-                <div class="i-f7:sidebar-left w-4 h-4" />
-              </button>
-            </Show>
+        <Show when={selectedGroupId() === VIEW_CALENDAR}>
+            <CalendarView />
+        </Show>
+        <Show when={selectedGroupId() !== VIEW_CALENDAR}>
+            <div class="p-4 border-b border-gray-200">
+            <div class="flex items-center space-x-2">
+                <Show when={!sidebarVisible()}>
+                <button onClick={toggleSidebar} class="p-1 text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer flex-shrink-0" title="Show sidebar">
+                    <div class="i-f7:sidebar-left w-4 h-4" />
+                </button>
+                </Show>
 
-            {/* Title / Folder Editing */}
-            <div class="flex-1 min-w-0">
-                 <Show when={() => {
-                     const gid = selectedGroupId();
-                     return gid !== VIEW_ALL && gid !== VIEW_FAVORITES && gid !== null && gid !== undefined;
-                 }} fallback={
-                     <h2 class="text-lg font-semibold text-gray-800 truncate" title={panelTitle()}>{panelTitle()}</h2>
-                 }>
-                    {(() => {
-                        const g = groups().find(gr => gr.id === selectedGroupId());
-                        return g ? (
-                           <input
-                            type="text"
-                            value={isFolderPanelEditing() ? folderPanelEditingTitle() : g.name}
-                            onInput={(e) => setFolderPanelEditingTitle((e.target as HTMLInputElement).value)}
-                            onFocus={() => {
-                              setIsFolderPanelEditing(true);
-                              setFolderPanelEditingTitle(g.name);
-                            }}
-                            onBlur={(e) => {
-                              const newTitle = (e.target as HTMLInputElement).value.trim();
-                              if (newTitle && newTitle !== g.name) {
-                                updateGroup(g.id, newTitle);
-                              } else if (!newTitle) {
+                {/* Title / Folder Editing */}
+                <div class="flex-1 min-w-0">
+                    <Show when={() => {
+                        const gid = selectedGroupId();
+                        return gid !== VIEW_ALL && gid !== VIEW_FAVORITES && gid !== null && gid !== undefined;
+                    }} fallback={
+                        <h2 class="text-lg font-semibold text-gray-800 truncate" title={panelTitle()}>{panelTitle()}</h2>
+                    }>
+                        {(() => {
+                            const g = groups().find(gr => gr.id === selectedGroupId());
+                            return g ? (
+                            <input
+                                type="text"
+                                value={isFolderPanelEditing() ? folderPanelEditingTitle() : g.name}
+                                onInput={(e) => setFolderPanelEditingTitle((e.target as HTMLInputElement).value)}
+                                onFocus={() => {
+                                setIsFolderPanelEditing(true);
                                 setFolderPanelEditingTitle(g.name);
-                              }
-                              setIsFolderPanelEditing(false);
-                              setFolderPanelEditingTitle('');
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                (e.target as HTMLInputElement).blur();
-                              } else if (e.key === 'Escape') {
+                                }}
+                                onBlur={(e) => {
+                                const newTitle = (e.target as HTMLInputElement).value.trim();
+                                if (newTitle && newTitle !== g.name) {
+                                    updateGroup(g.id, newTitle);
+                                } else if (!newTitle) {
+                                    setFolderPanelEditingTitle(g.name);
+                                }
                                 setIsFolderPanelEditing(false);
                                 setFolderPanelEditingTitle('');
-                                (e.target as HTMLInputElement).blur();
-                              }
-                            }}
-                            class="text-lg font-semibold bg-transparent border-none outline-none w-full"
-                            placeholder="Folder name..."
-                          />
-                        ) : <span>Content</span>
-                    })()}
-                 </Show>
-            </div>
-
-            <span class="text-sm text-gray-500 flex-shrink-0">{filteredNotes().length}</span>
-
-            {/* Sort Button */}
-            <button
-                ref={(el) => { sortBtnEl = el as HTMLButtonElement; }}
-                onClick={() => {
-                    updateSortDropdownPosition();
-                    setSortDropdownOpen(!sortDropdownOpen());
-                }}
-                class="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer flex-shrink-0"
-                title="Sort"
-            >
-              <div class="i-f7:line-horizontal-3-decrease w-4 h-4" />
-            </button>
-
-            <Show when={sortDropdownOpen()}>
-              <Portal>
-                <div
-                  class="fixed z-50 w-56 bg-white border border-gray-200 rounded-md shadow p-2 text-xs text-gray-700 space-y-2"
-                  style={`left: ${sortDropdownPos().left}px; top: ${sortDropdownPos().top}px;`}
-                  use:clickOutside={() => setSortDropdownOpen(false)}
-                >
-                  <div class="font-medium text-gray-600 mb-1">Sort</div>
-                  <div class="flex items-center justify-between">
-                    <span>Sort by</span>
-                    <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
-                      <option value="updated">Updated time</option>
-                      <option value="created">Created time</option>
-                      <option value="title">Title</option>
-                    </select>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span>Order</span>
-                    <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span>Pinned first</span>
-                    <button class={`${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'} px-2 py-1 rounded cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? 'On' : 'Off'}</button>
-                  </div>
+                                }}
+                                onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    (e.target as HTMLInputElement).blur();
+                                } else if (e.key === 'Escape') {
+                                    setIsFolderPanelEditing(false);
+                                    setFolderPanelEditingTitle('');
+                                    (e.target as HTMLInputElement).blur();
+                                }
+                                }}
+                                class="text-lg font-semibold bg-transparent border-none outline-none w-full"
+                                placeholder="Folder name..."
+                            />
+                            ) : <span>Content</span>
+                        })()}
+                    </Show>
                 </div>
-              </Portal>
-            </Show>
 
-          </div>
-        </div>
+                <span class="text-sm text-gray-500 flex-shrink-0">{filteredNotes().length}</span>
 
-        <div class="flex-1 overflow-y-auto px-2 pt-2 pb-2">
-          <For each={filteredNotes()}>
-            {(note) => <NoteItem note={note} />}
-          </For>
-          <Show when={filteredNotes().length === 0}>
-            <div class="p-6 text-center text-gray-500">
-              <div class="text-xs">
-                  {searchQuery() ? 'No matching notes' : 'No notes found'}
-              </div>
+                {/* Sort Button */}
+                <button
+                    ref={(el) => { sortBtnEl = el as HTMLButtonElement; }}
+                    onClick={() => {
+                        updateSortDropdownPosition();
+                        setSortDropdownOpen(!sortDropdownOpen());
+                    }}
+                    class="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer flex-shrink-0"
+                    title="Sort"
+                >
+                <div class="i-f7:line-horizontal-3-decrease w-4 h-4" />
+                </button>
+
+                <Show when={sortDropdownOpen()}>
+                <Portal>
+                    <div
+                    class="fixed z-50 w-56 bg-white border border-gray-200 rounded-md shadow p-2 text-xs text-gray-700 space-y-2"
+                    style={`left: ${sortDropdownPos().left}px; top: ${sortDropdownPos().top}px;`}
+                    use:clickOutside={() => setSortDropdownOpen(false)}
+                    >
+                    <div class="font-medium text-gray-600 mb-1">Sort</div>
+                    <div class="flex items-center justify-between">
+                        <span>Sort by</span>
+                        <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortKey()} onChange={(e) => setLeftListSortKey((e.target as HTMLSelectElement).value as any)}>
+                        <option value="updated">Updated time</option>
+                        <option value="created">Created time</option>
+                        <option value="title">Title</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>Order</span>
+                        <select class="px-3 py-2 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer" value={leftListSortOrder()} onChange={(e) => setLeftListSortOrder((e.target as HTMLSelectElement).value as any)}>
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>Pinned first</span>
+                        <button class={`${leftListPinnedFirst() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'} px-2 py-1 rounded cursor-pointer`} onClick={() => setLeftListPinnedFirst(!leftListPinnedFirst())}>{leftListPinnedFirst() ? 'On' : 'Off'}</button>
+                    </div>
+                    </div>
+                </Portal>
+                </Show>
+
             </div>
-          </Show>
-        </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-2 pt-2 pb-2">
+            <For each={filteredNotes()}>
+                {(note) => <NoteItem note={note} />}
+            </For>
+            <Show when={filteredNotes().length === 0}>
+                <div class="p-6 text-center text-gray-500">
+                <div class="text-xs">
+                    {searchQuery() ? 'No matching notes' : 'No notes found'}
+                </div>
+                </div>
+            </Show>
+            </div>
+        </Show>
       </div>
     </Show>
   );
