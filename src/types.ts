@@ -55,3 +55,4 @@ export interface OutboxItem {
 
 export const VIEW_ALL = 'VIEW_ALL';
 export const VIEW_FAVORITES = 'VIEW_FAVORITES';
+export const VIEW_CALENDAR = 'VIEW_CALENDAR';

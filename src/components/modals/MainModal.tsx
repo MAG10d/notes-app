@@ -1,6 +1,7 @@
-import { Show } from 'solid-js';
+import { Show, For } from 'solid-js';
 import { useNotes } from '../../context/NotesContext';
 import { Auth } from '../auth/Auth';
+import { languages } from '../../i18n';
 
 export function MainModal() {
   // Get all the states and functions needed for this component from the context
@@ -15,6 +16,13 @@ export function MainModal() {
     toggleSidebar,
     spellcheckDisabled,
     setSpellcheckDisabled,
+
+    // I18n and Theme
+    language,
+    setLanguage,
+    theme,
+    setTheme,
+    t,
   } = useNotes();
   
   // Apply the browser spellcheck attribute to the entire document tree
@@ -57,42 +65,42 @@ export function MainModal() {
           
           {/* Left menu */}
           <div class="w-48 border-r border-gray-200 p-3 overflow-y-auto">
-            <div class="text-xs text-gray-500 mb-2 px-2">Menu</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-2 px-2">Menu</div>
             <button
               classList={{
                 'w-full text-left px-2 py-2 rounded cursor-pointer flex items-center gap-2': true,
-                'bg-gray-100 text-gray-900': activeModalTab() === 'account',
-                'text-gray-700 hover:bg-gray-50': activeModalTab() !== 'account',
+                'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100': activeModalTab() === 'account',
+                'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800': activeModalTab() !== 'account',
               }}
               onClick={() => setActiveModalTab('account')}
             >
               <div class="i-f7:person w-4 h-4" />
-              <span class="text-sm">Account</span>
+              <span class="text-sm">{t('auth.account')}</span>
             </button>
             <button
               classList={{
                 'w-full text-left px-2 py-2 rounded cursor-pointer flex items-center gap-2 mt-1': true,
-                'bg-gray-100 text-gray-900': activeModalTab() === 'settings',
-                'text-gray-700 hover:bg-gray-50': activeModalTab() !== 'settings',
+                'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100': activeModalTab() === 'settings',
+                'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800': activeModalTab() !== 'settings',
               }}
               onClick={() => setActiveModalTab('settings')}
             >
               <div class="i-f7:gear-alt w-4 h-4" />
-              <span class="text-sm">Settings</span>
+              <span class="text-sm">{t('settings.title')}</span>
             </button>
           </div>
 
           {/* Right content area */}
           <div class="flex-1 p-4 overflow-y-auto">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-800">
-                {activeModalTab() === 'account' ? 'Account' : 'Settings'}
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                {activeModalTab() === 'account' ? t('auth.account') : t('settings.title')}
               </h3>
               <button
-                class="p-1 rounded hover:bg-gray-100 cursor-pointer"
+                class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-500 dark:text-gray-400"
                 onClick={() => setIsMainModalOpen(false)}
-                aria-label="Close"
-                title="Close"
+                aria-label={t('settings.close')}
+                title={t('settings.close')}
               >
                 <div class="i-f7:xmark w-5 h-5" />
               </button>
@@ -104,49 +112,56 @@ export function MainModal() {
             </Show>
             
             <Show when={activeModalTab() === 'settings'}>
-              <div class="space-y-3 text-sm text-gray-700">
+              <div class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
                 <div class="flex items-center justify-between">
-                  <span>Sidebar visible</span>
+                  <span>{sidebarVisible() ? t('app.sidebar_hide') : t('app.sidebar_show')}</span>
                   <button
-                    class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 cursor-pointer"
+                    class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 cursor-pointer"
                     onClick={() => {
                       toggleSidebar();
                       setIsMainModalOpen(false);
                     }}
                   >
-                    {sidebarVisible() ? 'Hide' : 'Show'}
+                    {sidebarVisible() ? t('content.on') : t('content.off')}
                   </button>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span>Disable browser spellcheck</span>
+                  <span>{t('settings.spellcheck')}</span>
                   <button
                     classList={{
-                        'px-2 py-1 rounded cursor-pointer': true,
-                        'bg-gray-800 text-white hover:bg-gray-700': spellcheckDisabled(),
-                        'bg-gray-100 text-gray-800 hover:bg-gray-200': !spellcheckDisabled(),
+                        'px-2 py-1 rounded cursor-pointer transition-colors': true,
+                        'bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500': spellcheckDisabled(),
+                        'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600': !spellcheckDisabled(),
                     }}
                     onClick={handleToggleSpellcheck}
                   >
-                    {spellcheckDisabled() ? 'On' : 'Off'}
+                    {spellcheckDisabled() ? t('content.on') : t('content.off')}
                   </button>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span>Language</span>
+                  <span>{t('settings.language')}</span>
                   <div class="flex items-center gap-2">
-                    <select class="px-2 py-1 rounded bg-gray-100 text-gray-500 cursor-not-allowed" disabled>
-                      <option>System</option>
-                      <option>English</option>
-                      <option>繁體中文</option>
+                    <select
+                      class="px-2 py-1 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 cursor-pointer border-none outline-none"
+                      value={language()}
+                      onChange={(e) => setLanguage(e.currentTarget.value as any)}
+                    >
+                      <For each={languages}>
+                        {(lang) => <option value={lang.code}>{lang.label}</option>}
+                      </For>
                     </select>
                   </div>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span>Theme</span>
+                  <span>{t('settings.theme')}</span>
                   <div class="flex items-center gap-2">
-                    <select class="px-2 py-1 rounded bg-gray-100 text-gray-500 cursor-not-allowed" disabled>
-                      <option>System</option>
-                      <option>Light</option>
-                      <option>Dark</option>
+                    <select
+                      class="px-2 py-1 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 cursor-pointer border-none outline-none"
+                      value={theme()}
+                      onChange={(e) => setTheme(e.currentTarget.value as any)}
+                    >
+                      <option value="light">{t('settings.light')}</option>
+                      <option value="dark">{t('settings.dark')}</option>
                     </select>
                   </div>
                 </div>
